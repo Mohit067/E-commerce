@@ -6,6 +6,8 @@ import { apiFetch, streamChat, type AgentProduct } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { useAuth } from "@/stores/auth";
 import { useUI } from "@/stores/ui";
+import { useGuestCart } from "@/stores/guest-cart";
+import { SmartImage } from "@/components/product-image";
 import { cn } from "@/lib/utils";
 
 interface Msg {
@@ -39,21 +41,23 @@ function Rich({ text }: { text: string }) {
 
 function AgentProductCard({ p, onAdded }: { p: AgentProduct; onAdded: () => void }) {
   const { user } = useAuth();
+  const guestAdd = useGuestCart((s) => s.add);
   const [done, setDone] = useState(false);
   const add = async () => {
-    if (!user) return;
-    await apiFetch("/cart/items", {
-      method: "POST", auth: true,
-      body: JSON.stringify({ product_id: p.id, quantity: 1 }),
-    });
+    if (user) {
+      await apiFetch("/cart/items", {
+        method: "POST", auth: true,
+        body: JSON.stringify({ product_id: p.id, quantity: 1 }),
+      });
+    } else {
+      guestAdd({ product_id: p.id, slug: p.slug, name: p.name, price: p.price, image_url: p.image_url });
+    }
     setDone(true);
     onAdded();
   };
   return (
     <div className="flex gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 p-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={p.image_url || `https://picsum.photos/seed/${p.id}/200/200`} alt={p.name}
-        className="h-14 w-14 rounded-md object-cover bg-zinc-100" loading="lazy" />
+      <SmartImage src={p.image_url} seed={p.id} alt={p.name} className="h-14 w-14 rounded-md object-cover" />
       <div className="min-w-0 flex-1">
         <Link href={`/products/${p.slug}`} className="line-clamp-2 text-xs font-medium hover:underline">
           {p.name}
@@ -63,11 +67,9 @@ function AgentProductCard({ p, onAdded }: { p: AgentProduct; onAdded: () => void
           <Link href={`/products/${p.slug}`} className="rounded-md border border-zinc-300 dark:border-zinc-600 px-2 py-0.5 text-[11px]">
             View
           </Link>
-          {user && (
-            <button onClick={add} className="rounded-md bg-zinc-900 dark:bg-white px-2 py-0.5 text-[11px] font-medium text-white dark:text-zinc-900">
-              {done ? "Added ✓" : "Add to Cart"}
-            </button>
-          )}
+          <button onClick={add} className="rounded-md bg-zinc-900 dark:bg-white px-2 py-0.5 text-[11px] font-medium text-white dark:text-zinc-900">
+            {done ? (user ? "Added ✓" : "Saved ✓") : "Add to Cart"}
+          </button>
         </div>
       </div>
     </div>

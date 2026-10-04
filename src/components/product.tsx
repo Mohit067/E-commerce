@@ -6,13 +6,16 @@ import { apiFetch } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { useAuth } from "@/stores/auth";
 import { useUI } from "@/stores/ui";
+import { useGuestCart } from "@/stores/guest-cart";
+import { SmartImage } from "@/components/product-image";
 import type { Product } from "@/types";
 
 export function ProductCard({ p }: { p: Product }) {
-  const img = p.images?.[0]?.url ?? `https://picsum.photos/seed/${p.id}/600/600`;
+  const img = p.images?.[0]?.url;
   const { user } = useAuth();
   const qc = useQueryClient();
   const bumpCart = useUI((s) => s.bumpCart);
+  const guestAdd = useGuestCart((s) => s.add);
   const add = useMutation({
     mutationFn: () => apiFetch("/cart/items", {
       method: "POST", auth: true,
@@ -23,12 +26,22 @@ export function ProductCard({ p }: { p: Product }) {
       qc.invalidateQueries({ queryKey: ["cart"] });
     },
   });
+  const onAdd = () => {
+    if (user) {
+      add.mutate();
+    } else {
+      guestAdd({
+        product_id: p.id, slug: p.slug, name: p.name, price: p.price,
+        image_url: img ?? "",
+      });
+      bumpCart();
+    }
+  };
   return (
     <div className="group overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-shadow hover:shadow-md">
       <Link href={`/products/${p.slug}`}>
-        <div className="aspect-square overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+        <div className="aspect-square overflow-hidden">
+          <SmartImage src={img} seed={p.id} alt={p.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
         </div>
       </Link>
       <div className="p-3">
@@ -51,17 +64,17 @@ export function ProductCard({ p }: { p: Product }) {
         </div>
         <div className="mt-2 flex gap-2">
           <button
-            disabled={!user || p.stock <= 0 || add.isPending}
-            onClick={() => add.mutate()}
+            disabled={p.stock <= 0 || add.isPending}
+            onClick={onAdd}
             className="flex-1 rounded-lg bg-zinc-900 dark:bg-white px-3 py-1.5 text-xs font-medium text-white dark:text-zinc-900 disabled:opacity-40"
           >
-            {p.stock <= 0 ? "Out of stock" : add.isPending ? "Adding…" : "Add to Cart"}
+            {p.stock <= 0 ? "Out of stock" : add.isPending ? "Adding…" : add.isSuccess ? "Added ✓" : "Add to Cart"}
           </button>
           <Link href={`/products/${p.slug}`} className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-xs">
             View
           </Link>
         </div>
-        {!user && <p className="mt-1 text-[11px] text-zinc-400"><Link href="/login" className="underline">Log in</Link> to add to cart</p>}
+        {!user && <p className="mt-1 text-[11px] text-zinc-400">Guest cart — <Link href="/login" className="underline">log in</Link> to check out</p>}
       </div>
     </div>
   );

@@ -67,6 +67,35 @@ BRAND_HINTS = ["sony", "apple", "samsung", "nike", "adidas", "logitech", "dell",
                "lenovo", "boat", "jbl", "canon", "lg", "xiaomi", "oneplus", "puma"]
 
 
+IRREGULAR = {"mice": "mouse"}
+
+
+def _tokens(text: str) -> list[str]:
+    out = []
+    for w in text.lower().split():
+        w = _singular(w.strip(".,!?()\"'"))
+        out.append(IRREGULAR.get(w, w))
+    return out
+
+
+def detect_category(text: str) -> str:
+    """Whole-token match in message order (the first category named is the product;
+    'phone with a good camera' -> phone). Avoids 'phone' firing inside 'headphones'."""
+    keys = set(CATEGORY_KEYWORDS)
+    for t in _tokens(text):
+        if t in keys:
+            return t
+    return ""
+
+
+def detect_brand(text: str) -> str:
+    toks = set(_tokens(text))
+    for b in BRAND_HINTS:
+        if b in toks:
+            return b
+    return ""
+
+
 def _money_to_float(text: str) -> float | None:
     m = re.search(r"[₹Rs.\s]*([\d,]+(?:\.\d+)?)\s*(k|K|lakh|L)?", text)
     if not m:
@@ -97,7 +126,9 @@ def extract_budget(text: str) -> tuple[float | None, float | None]:
 
 
 def detect_intent(text: str) -> str:
-    t = text.lower()
+    t = text.lower().strip()
+    if re.match(r"^(hi|hello|hey|greetings|hola|namaste|good\s+(morning|afternoon|evening))\b", t) or t in ["who are you", "what can you do", "help", "who made you"]:
+        return "greeting"
     if any(w in t for w in ["add", "put", "cart"]) and any(w in t for w in ["add", "put", "into", "to cart"]):
         return "cart_add"
     if "remove" in t and "cart" in t:
@@ -147,7 +178,7 @@ CAT_MAP: dict[str, list[str]] = {
     "mouse": ["mice"], "monitor": ["monitors"], "tablet": ["mobiles"],
     "speaker": ["speakers"], "console": ["consoles"], "chair": ["gaming chairs", "office chairs"],
     "lamp": ["lamps"], "bag": ["backpacks"], "book": ["books"],
-    "shirt": ["t-shirts", "shirts"], "dress": ["dresses"], "shoe": ["footwear"],
+    "shirt": ["t-shirts", "shirts"], "dress": ["dresses"],
 }
 
 
@@ -180,6 +211,12 @@ def discover_products(db: Session, user, kw: str, cat_hit: str, brand_hit: str,
             max_price=hi, rating=rating_min, sort=sort, limit=limit)
         if res.get("products"):
             return res
+    # fallback: catalog popular products if no specific filter was given
+    res = TOOL_REGISTRY["search_products"](
+        db, user, query="", category="", brand="",
+        max_price=None, rating=None, sort=sort or "popular", limit=limit)
+    if res.get("products"):
+        return res
     return {"products": [], "total": 0}
 
 
@@ -222,12 +259,17 @@ def try_adk_reply(message: str, catalog_context: str, history: list[dict]) -> st
         client = genai.Client(api_key=settings.google_api_key)
         hist = "\n".join(f"{h['role']}: {h['content'][:500]}" for h in history[-8:])
         resp = client.models.generate_content(
-            model=settings.google_genai_model,
+            model=settings.effective_model,
             contents=f"{SYSTEM_PROMPT}\n\nConversation so far:\n{hist}\n\n"
                      f"Live catalog context (use only this data, do not invent):\n{catalog_context}\n\n"
                      f"User: {message}\nAssistant:")
-        return (resp.text or "").strip() or None
-    except Exception:
+        out = (resp.text or "").strip()
+        if out:
+            print(f"[try_adk_reply] Gemini generated response using {settings.effective_model}")
+            return out
+        return None
+    except Exception as e:
+        print(f"[try_adk_reply] Gemini call failed: {e}")
         return None
 
 
@@ -239,8 +281,8 @@ def run_agent_turn(db: Session, conv: models.AgentConversation,
     if hi is None and "budget_max" in ctx:
         hi = ctx["budget_max"]
     kw = _keywords(message)
-    cat_hit = next((c for c in CATEGORY_KEYWORDS if c in message.lower()), ctx.get("category_hint", ""))
-    brand_hit = next((b for b in BRAND_HINTS if b in message.lower()), "")
+    cat_hit = detect_category(message) or ctx.get("category_hint", "")
+    brand_hit = detect_brand(message)
     rating_min = 4.5 if "4.5" in message else (4.0 if re.search(r"\b4(\.0)?\s*\+?\s*star|rating (above|over) 4\b", message.lower()) else None)
 
     products: list[dict] = []
@@ -248,7 +290,27 @@ def run_agent_turn(db: Session, conv: models.AgentConversation,
     uctx = build_user_context(db, user)
     greeting = f" {uctx['name'].split()[0]}" if uctx.get("authenticated") else ""
 
-    if intent == "cart_add":
+    if intent == "greeting":
+        recs = TOOL_REGISTRY["get_recommendations"](db, user, limit=4).get("products", [])
+        if not recs:
+            recs = TOOL_REGISTRY["search_products"](db, user, sort="popular", limit=4).get("products", [])
+        catalog_ctx = "\n".join(f"- {p['name']} | ₹{p['price']:,.0f} | ★{p['rating_avg']}" for p in recs)
+        history = [{"role": m.role, "content": m.content} for m in
+                   db.query(models.AgentMessage).filter_by(conversation_id=conv.id).order_by(
+                       models.AgentMessage.created_at.desc()).limit(6).all()]
+        llm = try_adk_reply(message, catalog_ctx, history)
+        if llm:
+            reply = llm
+        else:
+            name_part = f" {greeting.strip()}" if greeting.strip() else ""
+            reply = (
+                f"Hello{name_part}! I'm your AI shopping assistant for Nova Commerce. 👋\n\n"
+                "I can help you find products, compare options, check stock, apply discounts, "
+                "or track your orders.\n\n"
+                "Here are some top picks to get started:"
+            )
+        products = recs
+    elif intent == "cart_add":
         res = discover_products(db, user, kw, cat_hit, brand_hit, None, None, "popular", 3)
         cands = res.get("products", [])
         if not cands:
@@ -371,9 +433,12 @@ def run_agent_turn(db: Session, conv: models.AgentConversation,
         if cands:
             filt = f" under ₹{hi:,.0f}" if hi else ""
             why = "They match your budget and have the strongest ratings." if hi or rating_min else "These are the strongest matches in the live catalog."
-            head = (llm + "\n\n" if llm else f"I found {res['total']} option(s){filt}, {greeting.strip() or 'friend'} — top picks:\n{why}")
-            bullets = "\n".join(f"- **{p['name']}** — ₹{p['price']:,.0f} ★{p['rating_avg']}" for p in cands[:6])
-            reply = head + ("\n" + bullets if not llm else "\n\n" + bullets)
+            if llm:
+                reply = llm
+            else:
+                head = f"I found {res.get('total', len(cands))} option(s){filt}, {greeting.strip() or 'friend'} — top picks:\n{why}"
+                bullets = "\n".join(f"- **{p['name']}** — ₹{p['price']:,.0f} ★{p['rating_avg']}" for p in cands[:6])
+                reply = head + "\n" + bullets
             products = cands
         else:
             recs = TOOL_REGISTRY["get_recommendations"](db, user, limit=6).get("products", [])

@@ -88,7 +88,6 @@ export async function streamChat(
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let full = "";
   let cid = conversationId ?? "";
   let buf = "";
   for (;;) {
@@ -104,7 +103,6 @@ export async function streamChat(
         const evt = JSON.parse(line.slice(5));
         if (evt.type === "start" || evt.type === "done") cid = evt.conversation_id ?? cid;
         else if (evt.type === "token") {
-          full += evt.token;
           onToken(evt.token);
         } else if (evt.type === "products") onProducts(evt.products ?? []);
       } catch { /* ignore */ }

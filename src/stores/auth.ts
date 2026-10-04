@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
+import { mergeGuestCart } from "@/stores/guest-cart";
 
 export interface User {
   id: string;
@@ -28,6 +29,7 @@ export const useAuth = create<AuthState>((set) => ({
     });
     localStorage.setItem("nc_access", t.access_token);
     localStorage.setItem("nc_refresh", t.refresh_token);
+    await mergeGuestCart().catch(() => {});
     const me = await apiFetch<User>("/auth/me", { auth: true });
     set({ user: me, ready: true });
   },
@@ -38,6 +40,7 @@ export const useAuth = create<AuthState>((set) => ({
     });
     localStorage.setItem("nc_access", t.access_token);
     localStorage.setItem("nc_refresh", t.refresh_token);
+    await mergeGuestCart().catch(() => {});
     const me = await apiFetch<User>("/auth/me", { auth: true });
     set({ user: me, ready: true });
   },

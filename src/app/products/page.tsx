@@ -26,7 +26,7 @@ function ProductsInner() {
   return (
     <div className="py-6">
       <h1 className="text-xl font-bold">All products</h1>
-      <p className="text-sm text-zinc-500">{q.data! ? `${q.data!.total.toLocaleString()} items` : "…"}</p>
+      <p className="text-sm text-zinc-500">{q.data ? `${q.data.total.toLocaleString()} items` : "…"}</p>
       <div className="mt-3">
         <FilterBar f={f} set={(nf) => { setF(nf); setPage(1); }} />
       </div>

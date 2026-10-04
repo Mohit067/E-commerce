@@ -1,22 +1,35 @@
-FROM node:20-alpine
-
+# ---- Stage 1: Install dependencies ----
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@12.8.1 --activate
 
-# Copy dependency files first for caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy the rest of the app
+# ---- Stage 2: Build ----
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@12.8.1 --activate
+
+# Copy deps from previous stage
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the Next.js app
 RUN pnpm build
+
+# ---- Stage 3: Production runner (minimal) ----
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy only what the standalone server needs
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["node", "server.js"]

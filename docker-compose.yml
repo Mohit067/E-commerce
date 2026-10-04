@@ -12,9 +12,13 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://nova:nova@postgres:5432/nova
+      DATABASE_URL: postgresql+psycopg2://nova:nova@postgres:5432/nova
       CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - ./backend/app:/srv/app
     ports:
       - "8000:8000"
     depends_on:

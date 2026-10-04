@@ -9,12 +9,15 @@ import { Badge, Button, Empty, ErrorState, Input, Skeleton } from "@/components/
 import { ProductCard } from "@/components/product";
 import { useAuth } from "@/stores/auth";
 import { useUI } from "@/stores/ui";
+import { useGuestCart } from "@/stores/guest-cart";
+import { SmartImage } from "@/components/product-image";
 import Link from "next/link";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const bumpCart = useUI((s) => s.bumpCart);
+  const guestAdd = useGuestCart((s) => s.add);
   const qc = useQueryClient();
   const router = useRouter();
   const [imgIdx, setImgIdx] = useState(0);
@@ -77,23 +80,40 @@ export default function ProductDetailPage() {
   if (!p.data) return <div className="py-6"><Empty title="Product unavailable" hint="It may have been removed." action={<Link href="/products"><Button>Browse products</Button></Link>} /></div>;
 
   const prod = p.data;
-  const imgs = prod.images.length ? prod.images : [{ id: "ph", url: `https://picsum.photos/seed/${prod.id}/800/800`, alt: prod.name, position: 0 }];
+  const imgs = prod.images.length ? prod.images : [{ id: "ph", url: "", alt: prod.name, position: 0 }];
   const out = prod.stock <= 0;
+
+  const onAdd = (buyNow = false) => {
+    if (!prod) return;
+    if (user) {
+      add.mutate();
+      if (buyNow) {
+        setTimeout(() => router.push("/checkout"), 400);
+      }
+    } else {
+      const v = prod.variants.find((x) => x.id === variant);
+      guestAdd({
+        product_id: prod.id, slug: prod.slug, name: prod.name, price: prod.price,
+        image_url: prod.images?.[0]?.url ?? "", variant_id: variant,
+        variant_name: v?.name,
+      }, qty);
+      bumpCart();
+      if (buyNow) router.push("/cart");
+    }
+  };
 
   return (
     <div className="py-6">
       <div className="grid gap-8 md:grid-cols-2">
         <div>
-          <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgs[Math.min(imgIdx, imgs.length - 1)].url} alt={prod.name} className="h-full w-full object-cover" />
+          <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+            <SmartImage src={imgs[Math.min(imgIdx, imgs.length - 1)].url} seed={prod.id} alt={prod.name} className="h-full w-full object-cover" />
           </div>
           <div className="mt-2 flex gap-2">
             {imgs.map((im, i) => (
               <button key={im.id} onClick={() => setImgIdx(i)}
                 className={`h-16 w-16 overflow-hidden rounded-lg border ${i === imgIdx ? "border-zinc-900 dark:border-white" : "border-zinc-200 dark:border-zinc-800"}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={im.url} alt={im.alt} className="h-full w-full object-cover" />
+                <SmartImage src={im.url} seed={`${prod.id}-${i}`} alt={im.alt} className="h-full w-full object-cover" />
               </button>
             ))}
           </div>
@@ -139,14 +159,14 @@ export default function ProductDetailPage() {
               <span className="w-8 text-center text-sm">{qty}</span>
               <button onClick={() => setQty(Math.min(9, qty + 1))} className="px-3 py-1.5">+</button>
             </div>
-            <Button disabled={out || !user || add.isPending} onClick={() => add.mutate()} className="flex-1">
+            <Button disabled={out || add.isPending} onClick={() => onAdd(false)} className="flex-1">
               {add.isPending ? "Adding…" : "Add to Cart"}
             </Button>
-            <Button variant="outline" disabled={out || !user} onClick={() => { add.mutate(); router.push("/checkout"); }}>
+            <Button variant="outline" disabled={out} onClick={() => onAdd(true)}>
               Buy Now
             </Button>
           </div>
-          {!user && <p className="mt-1 text-xs text-zinc-500"><Link href="/login" className="underline">Log in</Link> to purchase.</p>}
+          {!user && <p className="mt-1 text-xs text-zinc-500">Guest cart — <Link href="/login" className="underline">log in</Link> to check out faster.</p>}
           {add.isSuccess && <p className="mt-1 text-xs text-green-600">Added to cart ✓</p>}
           <p className="mt-3 text-xs text-zinc-500">Free delivery over ₹999 · 7-day replacement · GST invoice · Delivery in 3–5 days</p>
 

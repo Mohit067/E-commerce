@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Button, Card, Empty, ErrorState, Input, Skeleton } from "@/components/ui";
+import { SmartImage } from "@/components/product-image";
 import { useAuth } from "@/stores/auth";
+import { useGuestCart, guestTotals } from "@/stores/guest-cart";
 import { useUI } from "@/stores/ui";
 import { useState } from "react";
 
@@ -29,6 +31,11 @@ interface Cart {
 
 export default function CartPage() {
   const { user } = useAuth();
+  if (!user) return <GuestCart />;
+  return <UserCart />;
+}
+
+function UserCart() {
   const bumpCart = useUI((s) => s.bumpCart);
   const qc = useQueryClient();
   const [coupon, setCoupon] = useState("");
@@ -37,12 +44,8 @@ export default function CartPage() {
   const cart = useQuery({
     queryKey: ["cart", "page"],
     queryFn: () => apiFetch<Cart>("/cart", { auth: true }),
-    enabled: !!user,
   });
 
-  if (!user) {
-    return <div className="py-12"><Empty title="Your cart lives here" hint="Log in to sync your backend-backed cart." action={<Link href="/login"><Button>Login</Button></Link>} /></div>;
-  }
   if (cart.isLoading) return <div className="py-6 space-y-2"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (cart.isError) return <div className="py-6"><ErrorState message={(cart.error as Error).message} onRetry={() => cart.refetch()} /></div>;
 
@@ -86,15 +89,12 @@ export default function CartPage() {
 
 function CartRow({ item, onChanged }: { item: CartItem; onChanged: () => void }) {
   const setQty = async (q: number) => {
-    await apiFetch("/cart", { auth: true }).catch(() => null);
     await apiFetch(`/cart/items/${item.id}`, { method: "PATCH", auth: true, body: JSON.stringify({ quantity: q }) });
     onChanged();
   };
   return (
     <div className="flex gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.product.images?.[0]?.url ?? `https://picsum.photos/seed/${item.product.id}/200/200`}
-        alt={item.product.name} className="h-20 w-20 rounded-lg object-cover bg-zinc-100" />
+      <SmartImage src={item.product.images?.[0]?.url} seed={item.product.id} alt={item.product.name} className="h-20 w-20 rounded-lg object-cover" />
       <div className="flex-1">
         <Link href={`/products/${item.product.slug}`} className="text-sm font-medium hover:underline">{item.product.name}</Link>
         {item.variant && <p className="text-xs text-zinc-500">{item.variant.name}</p>}
@@ -109,6 +109,51 @@ function CartRow({ item, onChanged }: { item: CartItem; onChanged: () => void })
         </div>
       </div>
       <p className="text-sm font-bold">{inr(item.line_total)}</p>
+    </div>
+  );
+}
+
+function GuestCart() {
+  const items = useGuestCart((s) => s.items);
+  const setQty = useGuestCart((s) => s.setQty);
+  const t = guestTotals(items);
+  return (
+    <div className="grid gap-6 py-6 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-2">
+        <h1 className="text-xl font-bold">Cart ({items.length})</h1>
+        <p className="text-xs text-zinc-500">Browsing as guest — items are saved on this device.</p>
+        {items.length === 0 && <Empty title="Cart is empty" hint="Add products or ask the AI assistant." action={<Link href="/products"><Button>Shop now</Button></Link>} />}
+        {items.map((i) => (
+          <div key={`${i.product_id}-${i.variant_id ?? "base"}`} className="flex gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3">
+            <SmartImage src={i.image_url} seed={i.product_id} alt={i.name} className="h-20 w-20 rounded-lg object-cover" />
+            <div className="flex-1">
+              <Link href={`/products/${i.slug}`} className="text-sm font-medium hover:underline">{i.name}</Link>
+              {i.variant_name && <p className="text-xs text-zinc-500">{i.variant_name}</p>}
+              <p className="text-sm font-bold">{inr(i.price)}</p>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="flex items-center rounded-lg border border-zinc-300 dark:border-zinc-700 text-sm">
+                  <button onClick={() => setQty(i.product_id, i.variant_id, i.quantity - 1)} className="px-2.5 py-1">−</button>
+                  <span className="w-6 text-center">{i.quantity}</span>
+                  <button onClick={() => setQty(i.product_id, i.variant_id, i.quantity + 1)} className="px-2.5 py-1">+</button>
+                </div>
+                <button onClick={() => setQty(i.product_id, i.variant_id, 0)} className="text-xs text-red-500 hover:underline">Remove</button>
+              </div>
+            </div>
+            <p className="text-sm font-bold">{inr(i.price * i.quantity)}</p>
+          </div>
+        ))}
+      </div>
+      <Card className="h-fit p-4">
+        <h2 className="font-bold">Summary</h2>
+        <dl className="mt-2 space-y-1 text-sm">
+          <div className="flex justify-between"><dt>Subtotal</dt><dd>{inr(t.subtotal)}</dd></div>
+          <div className="flex justify-between"><dt>Shipping</dt><dd>{inr(t.shipping)}</dd></div>
+          <div className="flex justify-between"><dt>Tax (18%)</dt><dd>{inr(t.tax)}</dd></div>
+          <div className="flex justify-between border-t border-zinc-200 dark:border-zinc-800 pt-1 font-bold"><dt>Total</dt><dd>{inr(t.total)}</dd></div>
+        </dl>
+        <Link href="/login"><Button className="mt-3 w-full" disabled={items.length === 0}>Log in to check out</Button></Link>
+        <p className="mt-1 text-[11px] text-zinc-500">Your guest items merge into your account automatically on login.</p>
+      </Card>
     </div>
   );
 }

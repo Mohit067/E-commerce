@@ -13,16 +13,21 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./ecommerce.db"
     cors_origins: str = "http://localhost:3000"
     google_api_key: str = ""
-    google_genai_model: str = "gemini-2.0-flash"
+    google_genai_model: str = "gemini-3.8-flash"
+    agent_model: str = ""  # alias honored from some .env files
     seed_count_products: int = 1200
     demo_customer_email: str = "customer@example.com"
     demo_admin_email: str = "admin@example.com"
     demo_password: str = "password123"
 
     class Config:
-        env_file = ".env"
+        env_file = (".env", "../.env")
         env_file_encoding = "utf-8"
         extra = "ignore"
+
+    @property
+    def effective_model(self) -> str:
+        return self.agent_model or self.google_genai_model or "gemini-3.8-flash"
 
     @property
     def cors_origin_list(self) -> list[str]:

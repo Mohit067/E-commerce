@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { Category, PageRes, Product } from "@/types";
 import { ProductCard, ProductGridSkeleton } from "@/components/product";
+import { SmartImage } from "@/components/product-image";
 import { Empty, ErrorState } from "@/components/ui";
 import { useUI } from "@/stores/ui";
 
@@ -71,9 +72,7 @@ export default function Home() {
             {(cats.data ?? []).slice(0, 20).map((c) => (
               <Link key={c.id} href={`/categories/${c.slug}`}
                 className="w-32 shrink-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.image_url || `https://picsum.photos/seed/${c.slug}/300/200`} alt={c.name}
-                  className="h-16 w-full object-cover" loading="lazy" />
+                <SmartImage src={c.image_url} seed={c.slug} alt={c.name} className="h-16 w-full object-cover" />
                 <p className="truncate px-2 py-1.5 text-xs font-medium">{c.name}</p>
               </Link>
             ))}

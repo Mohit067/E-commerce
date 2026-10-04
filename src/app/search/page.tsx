@@ -8,16 +8,9 @@ import { ProductCard, ProductGridSkeleton } from "@/components/product";
 import { Empty, ErrorState } from "@/components/ui";
 import { DEFAULT_FILTERS, FilterBar, type Filters } from "@/components/filters";
 
-function SearchInner() {
-  const sp = useSearchParams();
-  const initial = sp.get("q") ?? "";
+function SearchInner({ initial }: { initial: string }) {
   const [f, setF] = useState<Filters>({ ...DEFAULT_FILTERS, search: initial });
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    setF((old) => ({ ...old, search: initial }));
-    setPage(1);
-  }, [initial]);
 
   // debounce keyword
   const [kw, setKw] = useState(initial);
@@ -41,11 +34,11 @@ function SearchInner() {
 
   return (
     <div className="py-6">
-      <h1 className="text-xl font-bold">Search{q.data! ? <span className="text-zinc-500 font-normal"> · {q.data!.total} results for “{f.search}”</span> : null}</h1>
+      <h1 className="text-xl font-bold">Search{q.data ? <span className="text-zinc-500 font-normal"> · {q.data.total} results for “{f.search}”</span> : null}</h1>
       <div className="mt-3">
         <FilterBar f={{ ...f, search: kw }} set={(nf) => { setKw(nf.search); setF(nf); setPage(1); }} />
       </div>
-      {q.data!?.suggestions?.length ? (
+      {q.data?.suggestions?.length ? (
         <p className="mt-2 text-xs text-zinc-500">
           Suggestions: {q.data!.suggestions.map((s, i) => (
             <button key={i} onClick={() => setKw(s)} className="mr-2 underline">{s}</button>
@@ -74,10 +67,16 @@ function SearchInner() {
   );
 }
 
+function SearchPageInner() {
+  const sp = useSearchParams();
+  const q = sp.get("q") ?? "";
+  return <SearchInner key={q} initial={q} />;
+}
+
 export default function SearchPage() {
   return (
     <Suspense fallback={<ProductGridSkeleton />}>
-      <SearchInner />
+      <SearchPageInner />
     </Suspense>
   );
 }

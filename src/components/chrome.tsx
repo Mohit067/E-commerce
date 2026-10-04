@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/stores/auth";
 import { useUI } from "@/stores/ui";
+import { useGuestCart } from "@/stores/guest-cart";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
@@ -23,7 +24,10 @@ export function Header() {
     enabled: !!user,
     retry: false,
   });
-  const count = cart?.items.reduce((a, i) => a + i.quantity, 0) ?? 0;
+  const guestCount = useGuestCart((s) => s.items.reduce((a, i) => a + i.quantity, 0));
+  const count = user
+    ? cart?.items.reduce((a, i) => a + i.quantity, 0) ?? 0
+    : guestCount;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

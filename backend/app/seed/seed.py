@@ -59,19 +59,33 @@ EXTRA_CATS = ["Clearance", "New Arrivals", "Bestsellers", "Gift Cards", "Refurbi
 TEMPLATES = [
     ("Headphones", "{B} WH-1000XM6 Wireless Noise Cancelling Headphones", ["Sony", "Bose", "Sennheiser"], 18000, 35000),
     ("Earbuds", "{B} True Wireless Earbuds with ANC", ["boAt", "Noise", "JBL", "OnePlus", "Realme"], 1500, 9000),
-    ("Smartphones", "{B} Galaxy S26 Ultra 5G (12GB, 256GB)", ["Samsung", "OnePlus", "Xiaomi", "Vivo"], 35000, 130000),
+    ("Smartphones", "{B} Galaxy S26 Ultra 5G (12GB, 256GB)", ["Samsung"], 55000, 130000),
+    ("Smartphones", "{B} 13 5G (12GB, 256GB)", ["OnePlus"], 35000, 70000),
+    ("Smartphones", "{B} 15 5G (12GB, 512GB)", ["Xiaomi"], 30000, 60000),
+    ("Smartphones", "{B} X200 Pro 5G (16GB, 512GB)", ["Vivo", "Oppo", "Realme"], 40000, 90000),
     ("Smartphones", "{B} iPhone 17 Pro (256GB)", ["Apple"], 80000, 170000),
     ("Smartphones", "{B} Pixel 10 Pro 5G (128GB)", ["Google"], 70000, 110000),
     ("Ultrabooks", "{B} MacBook Air M4 (16GB, 512GB)", ["Apple"], 95000, 150000),
-    ("Ultrabooks", "{B} XPS 14 OLED Laptop (Ultra 7, 16GB)", ["Dell", "HP", "Lenovo", "Asus"], 65000, 140000),
-    ("Gaming Laptops", "{B} ROG Strix G16 RTX 4060 Gaming Laptop", ["Asus", "MSI", "Acer", "Lenovo"], 75000, 180000),
-    ("Monitors", "{B} UltraSharp 32 4K USB-C Monitor", ["Dell", "LG", "Samsung", "BenQ"], 22000, 75000),
-    ("Mice", "{B} MX Master 4 Wireless Mouse", ["Logitech", "HP", "Dell"], 4500, 12000),
-    ("Keyboards", "{B} K8 Pro Mechanical Keyboard", ["Keychron", "Logitech", "Zebronics"], 3500, 15000),
-    ("Running Shoes", "{B} Air Max 2026 Running Shoes", ["Nike", "Adidas", "Puma", "Asics"], 4000, 18000),
-    ("Sneakers", "{B} Ultraboost Light Sneakers", ["Adidas", "Nike", "Puma"], 6000, 22000),
-    ("Mirrorless", "{B} EOS R50 Mirrorless Camera with 18-45mm", ["Canon", "Sony", "Nikon"], 55000, 120000),
-    ("Speakers", "{B} Flip 6 Portable Bluetooth Speaker", ["JBL", "boAt", "Sony", "Philips"], 3000, 15000),
+    ("Ultrabooks", "{B} XPS 14 OLED Laptop (Ultra 7, 16GB)", ["Dell"], 85000, 140000),
+    ("Ultrabooks", "{B} Spectre x360 2-in-1 Laptop (Ultra 7, 16GB)", ["HP"], 75000, 130000),
+    ("Ultrabooks", "{B} ThinkPad X1 Carbon (Ultra 7, 16GB)", ["Lenovo"], 80000, 140000),
+    ("Ultrabooks", "{B} Zenbook 14 OLED (Ryzen 7, 16GB)", ["Asus", "Acer"], 65000, 110000),
+    ("Gaming Laptops", "{B} ROG Strix G16 RTX 4060 Gaming Laptop", ["Asus"], 95000, 180000),
+    ("Gaming Laptops", "{B} RTX 4060 Gaming Laptop 15.6 (i7, 16GB)", ["MSI", "Acer", "Lenovo", "HP"], 75000, 150000),
+    ("Monitors", "{B} UltraSharp 32 4K USB-C Monitor", ["Dell"], 45000, 75000),
+    ("Monitors", "{B} 32 4K UHD Monitor", ["LG", "Samsung"], 22000, 55000),
+    ("Mice", "{B} MX Master 4 Wireless Mouse", ["Logitech"], 8000, 12000),
+    ("Mice", "{B} Wireless Ergonomic Mouse", ["HP", "Dell", "Lenovo"], 4500, 9000),
+    ("Keyboards", "{B} K8 Pro Mechanical Keyboard", ["Keychron"], 8000, 15000),
+    ("Keyboards", "{B} Wireless Mechanical Keyboard", ["Logitech", "Zebronics"], 3500, 9000),
+    ("Running Shoes", "{B} Air Max 2026 Running Shoes", ["Nike"], 8000, 18000),
+    ("Running Shoes", "{B} Running Shoes", ["Adidas", "Puma", "Asics"], 4000, 12000),
+    ("Sneakers", "{B} Ultraboost Light Sneakers", ["Adidas"], 9000, 22000),
+    ("Sneakers", "{B} RS-X Sneakers", ["Puma", "Nike"], 6000, 15000),
+    ("Mirrorless", "{B} EOS R50 Mirrorless Camera with 18-45mm", ["Canon"], 55000, 120000),
+    ("Mirrorless", "{B} Z30 Mirrorless Camera with 16-50mm", ["Sony", "Nikon"], 60000, 115000),
+    ("Speakers", "{B} Flip 6 Portable Bluetooth Speaker", ["JBL"], 8000, 15000),
+    ("Speakers", "{B} Portable Bluetooth Speaker", ["boAt", "Sony", "Philips"], 3000, 10000),
     ("Wearables", "{B} Galaxy Watch 7 BT (44mm)", ["Samsung", "Apple", "Noise", "Fire-Boltt"], 2500, 45000),
     ("Cookware", "{B} Tri-Ply Stainless Cookware Set (5pc)", ["Prestige", "Pigeon", "Hawkins"], 2500, 12000),
     ("Air Fryers", "{B} Digital Air Fryer 5.5L", ["Philips", "Havells", "Pigeon"], 6000, 16000),
@@ -119,6 +133,78 @@ def slugify(t: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")[:120]
 
 
+def U(pid: str, w: int = 800) -> str:
+    return f"https://images.unsplash.com/{pid}?q=80&w={w}&auto=format&fit=crop"
+
+
+# Real product-relevant imagery per template index (0..48, same order as TEMPLATES).
+# Frontend falls back to a placeholder if any URL is unreachable.
+TEMPLATE_IMAGES = [
+    ["photo-1505740420928-5e560c06d30e", "photo-1484704849700-f032a568e944", "photo-1583394838336-acd977736f90"],  # 0 headphones
+    ["photo-1590658268037-6bf12165a8df", "photo-1606220945770-b5b6c2c55bf1"],  # 1 earbuds
+    ["photo-1610945415295-d9bbf067e59c", "photo-1511707171634-5f897ff02aa9"],  # 2 galaxy
+    ["photo-1511707171634-5f897ff02aa9", "photo-1601784551446-20c9e07cdbdb"],  # 3 oneplus
+    ["photo-1511707171634-5f897ff02aa9", "photo-1511707171634-5f897ff02aa9"],  # 4 xiaomi
+    ["photo-1601784551446-20c9e07cdbdb", "photo-1511707171634-5f897ff02aa9"],  # 5 vivo/oppo
+    ["photo-1592750475338-74b7b21085ab", "photo-1511707171634-5f897ff02aa9"],  # 6 iphone
+    ["photo-1601784551446-20c9e07cdbdb", "photo-1511707171634-5f897ff02aa9"],  # 7 pixel
+    ["photo-1517336714731-489689fd1ca8", "photo-1496181133206-80ce9b88a853"],  # 8 macbook
+    ["photo-1496181133206-80ce9b88a853", "photo-1603302576837-37561b2e2302"],  # 9 xps
+    ["photo-1603302576837-37561b2e2302", "photo-1517336714731-489689fd1ca8"],  # 10 spectre
+    ["photo-1496181133206-80ce9b88a853", "photo-1517336714731-489689fd1ca8"],  # 11 thinkpad
+    ["photo-1603302576837-37561b2e2302", "photo-1496181133206-80ce9b88a853"],  # 12 zenbook
+    ["photo-1603302576837-37561b2e2302", "photo-1593642632823-8f785ba67e45"],  # 13 rog
+    ["photo-1593642632823-8f785ba67e45", "photo-1603302576837-37561b2e2302"],  # 14 gaming
+    ["photo-1527443224154-c4a3942d3acf", "photo-1547394765-185e1e68f34e"],  # 15 ultrasharp
+    ["photo-1547394765-185e1e68f34e", "photo-1527443224154-c4a3942d3acf"],  # 16 4k
+    ["photo-1527864550417-7fd91fc51a46"],  # 17 mx master
+    ["photo-1527864550417-7fd91fc51a46"],  # 18 ergo mouse
+    ["photo-1587829741301-dc798b83add3"],  # 19 k8
+    ["photo-1587829741301-dc798b83add3", "photo-1618384887929-16ec33fab9ef"],  # 20 wireless kb
+    ["photo-1542291026-7eec264c27ff", "photo-1549298916-b41d501d3772"],  # 21 airmax
+    ["photo-1549298916-b41d501d3772", "photo-1549298916-b41d501d3772"],  # 22 running
+    ["photo-1549298916-b41d501d3772"],  # 23 ultraboost
+    ["photo-1549298916-b41d501d3772", "photo-1542291026-7eec264c27ff"],  # 24 rsx
+    ["photo-1516035069371-29a1b244cc32", "photo-1526170375885-4d8ecf77b99f"],  # 25 eos
+    ["photo-1526170375885-4d8ecf77b99f", "photo-1516035069371-29a1b244cc32"],  # 26 z30
+    ["photo-1608043152269-423dbba4e7e1", "photo-1545454675-3531b543be5d"],  # 27 flip
+    ["photo-1545454675-3531b543be5d", "photo-1608043152269-423dbba4e7e1"],  # 28 portable speaker
+    ["photo-1579586337278-3befd40fd17a", "photo-1522312346375-d1a52e2b99b3", "photo-1434493789847-2f02dc6ca35d"],  # 29 watch
+    ["photo-1556911220-bff31c812dba", "photo-1574269909862-7e1d70bb8078"],  # 30 cookware
+    ["photo-1574269909862-7e1d70bb8078"],  # 31 air fryer
+    ["photo-1620916566398-39f1143ab7be", "photo-1556228720-195a672e8a03"],  # 32 serum
+    ["photo-1541643600914-78b084683601"],  # 33 perfume
+    ["photo-1553062407-98eeb64c6a62"],  # 34 backpack
+    ["photo-1523275335684-37898b6baf30", "photo-1434493789847-2f02dc6ca35d"],  # 35 chronograph
+    ["photo-1579586337278-3befd40fd17a", "photo-1522312346375-d1a52e2b99b3"],  # 36 fitness band
+    ["photo-1544367567-0f2fcb009e0b"],  # 37 yoga
+    ["photo-1544716278-ca5e3f4abd8c", "photo-1507842217343-583bb7270b66"],  # 38 books
+    ["photo-1507473885765-e6ed057f782c"],  # 39 smart bulb
+    ["photo-1558002038-1055907df827"],  # 40 security cam
+    ["photo-1606813907291-d86efa9b94db"],  # 41 ps5
+    ["photo-1560253023-3ec5d502959f"],  # 42 controller
+    ["photo-1542272604-787c3835535d", "photo-1541099649105-f69ad21f3246"],  # 43 jeans
+    ["photo-1595777457583-95e059d581b8"],  # 44 dress
+    ["photo-1511707171634-5f897ff02aa9"],  # 45 power bank
+    ["photo-1518770660439-4636190af475"],  # 46 ssd
+    ["photo-1507473885765-e6ed057f782c"],  # 47 lamp
+    ["photo-1540518614846-7eded433c457", "photo-1540518614846-7eded433c457"],  # 48 bedsheet
+]
+
+CAT_IMAGE = {
+    "Electronics": "photo-1498049794561-7780e7231661", "Mobiles": "photo-1511707171634-5f897ff02aa9",
+    "Laptops": "photo-1496181133206-80ce9b88a853", "Computers": "photo-1547082299-de196ea013d6",
+    "Gaming": "photo-1606813907291-d86efa9b94db", "Audio": "photo-1505740420928-5e560c06d30e",
+    "Cameras": "photo-1526170375885-4d8ecf77b99f", "Fashion": "photo-1441986300917-64674bd600d8",
+    "Men": "photo-1617137968427-85924c800a22", "Women": "photo-1595777457583-95e059d581b8",
+    "Footwear": "photo-1542291026-7eec264c27ff", "Home": "photo-1540518614846-7eded433c457",
+    "Kitchen": "photo-1556911220-bff31c812dba", "Beauty": "photo-1620916566398-39f1143ab7be",
+    "Sports": "photo-1517836357463-d25dfeac3438", "Books": "photo-1544716278-ca5e3f4abd8c",
+    "Accessories": "photo-1553062407-98eeb64c6a62", "Smart Home": "photo-1558002038-1055907df827",
+    "Office": "photo-1587829741301-dc798b83add3",
+}
+
+
 def run(products_target: int = 1200, users_target: int = 1000):
     random.seed(SEED)
     try:
@@ -135,9 +221,11 @@ def run(products_target: int = 1200, users_target: int = 1000):
                   models.Coupon, models.Shipment, models.Payment, models.OrderItem, models.Order,
                   models.WishlistItem, models.Wishlist, models.CartItem, models.Cart,
                   models.InventoryTransaction, models.Inventory, models.ProductImage,
-                  models.ProductVariant, models.Product, models.Address, models.User,
-                  models.Category, models.Brand]:
+                  models.ProductVariant, models.Product, models.Address, models.User]:
             db.query(m).delete()
+        db.query(models.Category).filter(models.Category.parent_id.isnot(None)).delete()
+        db.query(models.Category).delete()
+        db.query(models.Brand).delete()
         db.commit()
 
         # brands
@@ -155,7 +243,7 @@ def run(products_target: int = 1200, users_target: int = 1000):
         for t in TOP_CATS:
             c = models.Category(id=str(uuid.uuid4()), name=t, slug=slugify(t),
                                 description=f"Shop {t}.",
-                                image_url=f"https://picsum.photos/seed/cat-{slugify(t)}/400/300")
+                                image_url=U(CAT_IMAGE.get(t, "photo-1441986300917-64674bd600d8"), 400))
             db.add(c)
             cat_objs.append(c)
             cat_by_name[t] = c
@@ -165,14 +253,14 @@ def run(products_target: int = 1200, users_target: int = 1000):
             for s in subs:
                 c = models.Category(id=str(uuid.uuid4()), name=s, slug=slugify(f"{top} {s}"),
                                     description=f"Shop {s} in {top}.", parent_id=parent.id,
-                                    image_url=f"https://picsum.photos/seed/cat-{slugify(s)}/400/300")
+                                    image_url=U(CAT_IMAGE.get(top, "photo-1441986300917-64674bd600d8"), 400))
                 db.add(c)
                 cat_objs.append(c)
                 cat_by_name[s] = c
         for e in EXTRA_CATS:
             c = models.Category(id=str(uuid.uuid4()), name=e, slug=slugify(e),
                                 description=f"Shop {e}.",
-                                image_url=f"https://picsum.photos/seed/cat-{slugify(e)}/400/300")
+                                image_url=U("photo-1441986300917-64674bd600d8", 400))
             db.add(c)
             cat_objs.append(c)
         db.commit()
@@ -203,15 +291,19 @@ def run(products_target: int = 1200, users_target: int = 1000):
         # products
         products, variants, images, invs = [], [], [], []
         for i in range(products_target):
-            t = TEMPLATES[i % len(TEMPLATES)]
+            ti = i % len(TEMPLATES)
+            t = TEMPLATES[ti]
             cat_hint, tmpl, brand_pool, lo, hi = t
             bname = random.choice(brand_pool)
             year = random.choice(["2024", "2025", "2026", "Pro", "Max", "Plus", "Lite"])
             name = tmpl.format(B=bname)
             if random.random() < 0.45:
                 name = f"{name} {year}".replace("  ", " ")
-            # ensure uniqueness
-            name = f"{name} · Gen {i//len(TEMPLATES)+1}" if i >= len(TEMPLATES) else name
+            # authentic differentiator instead of "Gen N": colourway / edition
+            if i >= len(TEMPLATES):
+                colorway = random.choice(COLORS)
+                edition = random.choice([year, f"{colorway}", f"{colorway} {year}"])
+                name = f"{name} ({edition})"
             cat = cat_by_name.get(cat_hint) or random.choice(leaf_cats)
             brand = brand_by_name.get(bname) or random.choice(brand_objs)
             price = round(random.uniform(lo, hi), 0)
@@ -230,11 +322,13 @@ def run(products_target: int = 1200, users_target: int = 1000):
                                                   "warranty": "1 year", "in_box": "1 unit + manual"}),
                                tags=f"{bname},{cat.name},{cat_hint}")
             products.append(p)
-            # images (2-3)
+            # real product-relevant images for this template (2-3 crops)
+            tmpl_imgs = TEMPLATE_IMAGES[ti] if ti < len(TEMPLATE_IMAGES) else []
             for k in range(random.choice([2, 2, 3])):
+                url = U(tmpl_imgs[k % len(tmpl_imgs)]) if tmpl_imgs else \
+                    f"https://picsum.photos/seed/{pid[:8]}-{k}/800/800"
                 images.append(models.ProductImage(id=str(uuid.uuid4()), product_id=pid,
-                                                  url=f"https://picsum.photos/seed/{pid[:8]}-{k}/800/800",
-                                                  alt=name, position=k))
+                                                  url=url, alt=name, position=k))
             # variants 1-3
             nvar = random.choice([1, 2, 2, 3])
             for v in range(nvar):
@@ -259,16 +353,18 @@ def run(products_target: int = 1200, users_target: int = 1000):
         db.add_all(products)
         db.commit()
         db.add_all(variants)
+        db.commit()
         db.add_all(images)
         db.add_all(invs)
         db.commit()
         print(f"seeded {len(products)} products, {len(variants)} variants, {len(users)} users, {len(cat_objs)} categories")
 
-        # reviews 5000+ (dedupe pairs in-memory: unique(product,user))
+        # reviews (dedupe pairs in-memory: unique(product,user))
         seen_pairs: set[tuple[str, str]] = set()
         revs = []
         attempts = 0
-        while len(revs) < 5500 and attempts < 30000:
+        target_reviews = min(5000, max(300, len(products) * 15))
+        while len(revs) < target_reviews and attempts < 30000:
             attempts += 1
             p = random.choice(products)
             u = random.choice(users)
@@ -285,13 +381,18 @@ def run(products_target: int = 1200, users_target: int = 1000):
         db.add_all(revs)
         db.commit()
         print(f"reviews inserted: {len(revs)}")
-        # recompute ratings
+        # recompute ratings via fast aggregate
         from sqlalchemy import func
-        for p in products:
-            rows = db.query(models.Review.rating).filter_by(product_id=p.id).all()
-            if rows:
-                p.rating_avg = round(sum(r[0] for r in rows) / len(rows), 2)
-                p.rating_count = len(rows)
+        ratings_agg = db.query(
+            models.Review.product_id,
+            func.avg(models.Review.rating),
+            func.count(models.Review.id)
+        ).group_by(models.Review.product_id).all()
+        prod_map = {p.id: p for p in products}
+        for pid, avg_r, cnt_r in ratings_agg:
+            if pid in prod_map:
+                prod_map[pid].rating_avg = round(float(avg_r), 2)
+                prod_map[pid].rating_count = cnt_r
         db.commit()
         print("reviews done")
 
@@ -313,7 +414,7 @@ def run(products_target: int = 1200, users_target: int = 1000):
         import math
         n_orders = 0
         for u in users[:400]:
-            if u.role != "customer":
+            if u.role != "customer" or u.email == settings.demo_customer_email:
                 continue
             # wishlist
             w = models.Wishlist(id=str(uuid.uuid4()), user_id=u.id)
@@ -356,13 +457,38 @@ def run(products_target: int = 1200, users_target: int = 1000):
                                        status=ostatus if ostatus != "confirmed" else "processing",
                                        estimated_delivery=datetime.utcnow() + timedelta(days=5)))
                 n_orders += 1
-        # demo customer gets a cart + wishlist + 2 orders
+        # demo customer gets a wishlist + cart + 2 delivered orders
         demo = next(u for u in users if u.email == settings.demo_customer_email)
         w = models.Wishlist(id=str(uuid.uuid4()), user_id=demo.id)
         db.add(w)
         db.flush()
         for p in products[:6]:
             db.add(models.WishlistItem(id=str(uuid.uuid4()), wishlist_id=w.id, product_id=p.id))
+        dc = models.Cart(id=str(uuid.uuid4()), user_id=demo.id)
+        db.add(dc)
+        db.flush()
+        for p in products[6:8]:
+            db.add(models.CartItem(id=str(uuid.uuid4()), cart_id=dc.id, product_id=p.id, quantity=1))
+        for k, p in enumerate(products[8:10]):
+            sub = float(p.price)
+            o = models.Order(id=str(uuid.uuid4()), order_number="NCDEMO000%d" % k,
+                             user_id=demo.id,
+                             status="delivered" if k == 0 else "shipped",
+                             subtotal=sub, discount=0, shipping=0, tax=round(sub * 0.18, 2),
+                             total=round(sub * 1.18, 2),
+                             shipping_address=json.dumps({"line1": "221 MG Road", "city": "Bengaluru"}),
+                             payment_status="paid",
+                             created_at=datetime.utcnow() - timedelta(days=12 - k * 5))
+            db.add(o)
+            db.flush()
+            db.add(models.OrderItem(id=str(uuid.uuid4()), order_id=o.id, product_id=p.id,
+                                    product_name=p.name, quantity=1,
+                                    unit_price=float(p.price), total_price=float(p.price)))
+            db.add(models.Payment(id=str(uuid.uuid4()), order_id=o.id, provider="mock",
+                                  status="paid", amount=o.total))
+            db.add(models.Shipment(id=str(uuid.uuid4()), order_id=o.id,
+                                   tracking_number="TRK" + o.order_number, status=o.status,
+                                   estimated_delivery=datetime.utcnow() + timedelta(days=2)))
         db.commit()
         print(f"orders: {n_orders}")
     finally:
